@@ -49,7 +49,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     let locationManager = CLLocationManager()
-    SwiftBackgroundLocationMonitoringPlugin.locationManager = locationManager
+    SwiftBackgroundLocationHandlerPlugin.locationManager = locationManager
 
     locationManager.delegate = self
     locationManager.requestAlwaysAuthorization()
@@ -91,7 +91,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
   public func locationManager(_ manager: CLLocationManager,
                        didChangeAuthorization authorizationStatus: CLAuthorizationStatus) {
       let status = authorizationStatusToString(authorizationStatus)
-      SwiftBackgroundLocationMonitoringPlugin.channel?.invokeMethod("status", arguments: status)
+      SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("status", arguments: status)
   }
 
   public func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
@@ -104,7 +104,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
         "is_mock": false
     ] as [String : Any]
 
-    SwiftBackgroundLocationMonitoringPlugin.channel?.invokeMethod("visit", arguments: visit)
+    SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("visit", arguments: visit)
   }
   public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
     if let lastLocation = locations.last {
@@ -119,7 +119,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
           "is_mock": false
       ] as [String : Any]
 
-      SwiftBackgroundLocationMonitoringPlugin.channel?.invokeMethod("location", arguments: location)
+      SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("location", arguments: location)
     }
   }
 }
