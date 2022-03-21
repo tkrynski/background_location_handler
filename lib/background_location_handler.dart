@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import './location_authorization_status.dart';
 
 class BackgroundLocationHandler {
   static const MethodChannel _channel = MethodChannel('background_location_handler');
@@ -62,10 +63,30 @@ class BackgroundLocationHandler {
     return;
   }
 
-  static Future<String> getAuthorizationStatus() async {
+  static Future<String> getAuthorizationStatusString() async {
     dynamic status = await _channel.invokeMethod('get_authorization_status');
     return status.toString();
   }
+
+  static Future<LocationAuthorizationStatus> getAuthorizationStatus() async {
+    dynamic status = await _channel.invokeMethod('get_authorization_status');
+    switch (status) {
+      case "notDetermined":
+        return LocationAuthorizationStatus.notDetermined;
+      case "authorizedWhenInUse":
+        return LocationAuthorizationStatus.whenInUse;
+      case "authorizedAlways":
+        return LocationAuthorizationStatus.always;
+      case "restricted":
+        return LocationAuthorizationStatus.restricted;
+      case "limited":
+        return LocationAuthorizationStatus.limited;
+      case "unknown":
+        return LocationAuthorizationStatus.unknown;
+    }
+    return LocationAuthorizationStatus.unknown;
+  }
+  
   static Future<String> getSettingsUrl() async {
     dynamic url = await _channel.invokeMethod('get_settings_url');
     return url.toString();

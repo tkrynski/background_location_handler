@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 import CoreLocation
 
-public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
+public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
   static var locationManager: CLLocationManager?
   static var channel: FlutterMethodChannel?
 
@@ -10,7 +10,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
     let channel = FlutterMethodChannel(name: "background_location_handler", binaryMessenger: registrar.messenger())
     let instance = SwiftBackgroundLocationHandlerPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
-    SwiftBackgroundLocationMonitoringPlugin.channel = channel
+    SwiftBackgroundLocationHandlerPlugin.channel = channel
 
     // not sure if this is needed
     channel.setMethodCallHandler(instance.handle)
@@ -81,7 +81,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin {
     } else if (call.method == "get_authorization_status") {
         result(self.getAuthorizationStatus(locationManager))
     } else if (call.method == "get_settings_url") {
-      result(string:UIApplication.openSettingsURLString)
+      result(UIApplication.openSettingsURLString)
     } else {
         result(true)
     }
