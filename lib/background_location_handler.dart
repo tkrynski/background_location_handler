@@ -16,6 +16,7 @@ class BackgroundLocationHandler {
   static startMonitoring(Function(Location)? locationCallback, Function(Visit)? visitCallback, Function(String)? statusCallback) async {
     // add a handler on the channel to receive updates from the native classes
     _channel.setMethodCallHandler((MethodCall methodCall) async {
+      print("MethodCall: ${methodCall.method}");
       if ((methodCall.method == 'location') && (locationCallback != null)) {
         var locationData = Map.from(methodCall.arguments);
         locationCallback(
@@ -50,7 +51,8 @@ class BackgroundLocationHandler {
 
     // start monitoring
     if (locationCallback != null) {
-      await _channel.invokeMethod('start_location_monitoring');
+      final result = await _channel.invokeMethod('start_location_monitoring');
+      print("start_location_monitoring result $result");
     }
     if (visitCallback != null) {
       await _channel.invokeMethod('start_visit_monitoring');
@@ -86,7 +88,7 @@ class BackgroundLocationHandler {
     }
     return LocationAuthorizationStatus.unknown;
   }
-  
+
   static Future<String> getSettingsUrl() async {
     dynamic url = await _channel.invokeMethod('get_settings_url');
     return url.toString();
