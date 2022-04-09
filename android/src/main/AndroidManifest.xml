@@ -1,10 +1,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.tkrynski.background_location_handler">
+    package="com.tkrynski.background_location_handler">
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application>
-        <receiver android:name="com.tkrynski.background_location_handler.LocationUpdatesBroadcastReceiver" />
+        <receiver android:name=".LocationUpdatesBroadcastReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="com.tkrynski.background_location_handler.PROCESS_UPDATES"/>
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".ShutdownReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.ACTION_SHUTDOWN" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.QUICKBOOT_POWEROFF" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".RestartReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

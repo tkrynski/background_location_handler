@@ -1,21 +1,105 @@
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import './location_authorization_status.dart';
 
+/// Function that executes your background work.
+/// You should return whether the task ran successfully or not.
+///
+/// [taskName] Returns the value you provided when registering the task.
+/// iOS will always return [Workmanager.iOSBackgroundTask]
+typedef BackgroundTaskHandler = Future<bool> Function(
+    String taskName, String inputData);
+
+
 class BackgroundLocationHandler {
-  static const MethodChannel _channel = MethodChannel('background_location_handler');
+  static const pkg = "com.tkrynski.background_location_handler";
+  factory BackgroundLocationHandler() => _instance;
+
+  BackgroundLocationHandler._internal(
+      MethodChannel backgroundChannel, MethodChannel foregroundChannel)
+      : _backgroundChannel = backgroundChannel,
+        _foregroundChannel = foregroundChannel;
+
+  static final BackgroundLocationHandler _instance = BackgroundLocationHandler._internal(
+      const MethodChannel(
+          "$pkg/background_channel_work_manager"),
+      const MethodChannel(
+          "$pkg/foreground_channel_work_manager"));
+
+  /// Use this constant inside your callbackDispatcher to identify when an iOS Background Fetch occurred.
+  ///
+  /// ```
+  /// void callbackDispatcher() {
+  ///   BackgroundLocationHandler().executeTask((taskName, inputData) {
+  ///      switch (taskName) {
+  ///        case BackgroundLocationHandler.iOSBackgroundTask:
+  ///          stderr.writeln("The iOS background fetch was triggered");
+  ///          break;
+  ///      }
+  ///
+  ///      return Future.value(true);
+  ///  });
+  /// }
+  /// ```
+  static const String iOSBackgroundTask = "iOSPerformFetch";
+  static bool _isInDebugMode = false;
+
+  MethodChannel _backgroundChannel = const MethodChannel(
+      "$pkg/background_channel_work_manager");
+  MethodChannel _foregroundChannel = const MethodChannel(
+      "$pkg/foreground_channel_work_manager");
+
+  /// A helper function so you only need to implement a [BackgroundTaskHandler]
+  void executeTask(final BackgroundTaskHandler backgroundTask) {
+    WidgetsFlutterBinding.ensureInitialized();
+    _backgroundChannel.setMethodCallHandler((call) async {
+      if (call.method == 'location') {
+        final extras = call.arguments["extras"];
+        final dartTask = call.arguments["$pkg.DART_TASK"];
+        return backgroundTask(
+            dartTask,
+            extras
+        );
+      }
+    });
+    // _backgroundChannel.invokeMethod("backgroundChannelInitialized");
+  }
+
+  /// This call is required if you wish to use the [BackgroundLocationHandler] plugin.
+  /// [callbackDispatcher] is a top level function which will be invoked by Android
+  /// [isInDebugMode] true will post debug notifications with information about when a task should have run
+  Future<void> initialize(
+      final Function callbackDispatcher,
+      String extras
+      ) async {
+    final callback = PluginUtilities.getCallbackHandle(callbackDispatcher);
+    assert(callback != null,
+    "The callbackDispatcher needs to be either a static function or a top level function to be accessible as a Flutter entry point.");
+    if (callback != null) {
+      final int handle = callback.toRawHandle();
+      await _foregroundChannel.invokeMethod<void>(
+          'initialize',
+          {
+            "extras": extras,
+            "callbackHandle": handle,
+          }
+      );
+    }
+  }
 
   static Future<String?> get platformVersion async {
-    final String? version = await _channel.invokeMethod('getPlatformVersion');
+    final String? version = await _instance._foregroundChannel.invokeMethod('getPlatformVersion');
     return version;
   }
 
   static startMonitoring(Function(Location)? locationCallback, Function(Visit)? visitCallback, Function(String)? statusCallback) async {
     // add a handler on the channel to receive updates from the native classes
-    _channel.setMethodCallHandler((MethodCall methodCall) async {
+    _instance._foregroundChannel.setMethodCallHandler((MethodCall methodCall) async {
       print("MethodCall: ${methodCall.method}");
       if ((methodCall.method == 'location') && (locationCallback != null)) {
         var locationData = Map.from(methodCall.arguments);
@@ -51,27 +135,27 @@ class BackgroundLocationHandler {
 
     // start monitoring
     if (locationCallback != null) {
-      final result = await _channel.invokeMethod('start_location_monitoring');
+      final result = await _instance._foregroundChannel.invokeMethod('start_location_monitoring');
       print("start_location_monitoring result $result");
     }
     if (visitCallback != null) {
-      await _channel.invokeMethod('start_visit_monitoring');
+      await _instance._foregroundChannel.invokeMethod('start_visit_monitoring');
     }
   }
   static stopMonitoring() async {
     // don't await
-    _channel.invokeMethod('stop_visit_monitoring');
-    _channel.invokeMethod('stop_location_monitoring');
+    _instance._foregroundChannel.invokeMethod('stop_visit_monitoring');
+    _instance._foregroundChannel.invokeMethod('stop_location_monitoring');
     return;
   }
 
   static Future<String> getAuthorizationStatusString() async {
-    dynamic status = await _channel.invokeMethod('get_authorization_status');
+    dynamic status = await _instance._foregroundChannel.invokeMethod('get_authorization_status');
     return status.toString();
   }
 
   static Future<LocationAuthorizationStatus> getAuthorizationStatus() async {
-    dynamic status = await _channel.invokeMethod('get_authorization_status');
+    dynamic status = await _instance._foregroundChannel.invokeMethod('get_authorization_status');
     switch (status) {
       case "notDetermined":
         return LocationAuthorizationStatus.notDetermined;
@@ -90,7 +174,7 @@ class BackgroundLocationHandler {
   }
 
   static Future<String> getSettingsUrl() async {
-    dynamic url = await _channel.invokeMethod('get_settings_url');
+    dynamic url = await _instance._foregroundChannel.invokeMethod('get_settings_url');
     return url.toString();
   }
 }
@@ -158,3 +242,4 @@ class Visit {
     return obj;
   }
 }
+

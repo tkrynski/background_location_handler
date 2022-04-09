@@ -25,8 +25,23 @@ import com.google.android.gms.location.LocationResult
 import java.util.Date
 import java.util.concurrent.Executors
 import io.flutter.plugin.common.MethodChannel
+import android.os.Handler
+import android.os.Looper
+import androidx.concurrent.futures.ResolvableFuture
+import com.google.common.util.concurrent.ListenableFuture
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.embedding.engine.plugins.shim.ShimPluginRegistry
+import io.flutter.plugin.common.MethodCall
+import io.flutter.view.FlutterCallbackInformation
+import io.flutter.view.FlutterMain
+import java.util.*
 
 private const val TAG = "LUBroadcastReceiver"
+private const val PKG = "com.tkrynski.background_location_handler";
+private const val BACKGROUND_CHANNEL_NAME = "$PKG/background_channel_work_manager"
+private const val CALLBACK_DISPATCHER_HANDLE_KEY = "$PKG.CALLBACK_DISPATCHER_HANDLE_KEY"
+private const val CALLBACK_EXTRAS_KEY = "com.tkrynski.background_location_handler.CALLBACK_EXTRAS"
 
 
 /**
@@ -43,6 +58,7 @@ private const val TAG = "LUBroadcastReceiver"
  *  foreground.
  */
 class LocationUpdatesBroadcastReceiver : BroadcastReceiver() {
+    private lateinit var engine: FlutterEngine
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.e(TAG, "onReceive() context:$context, intent:$intent, channel: $channel")
@@ -71,7 +87,23 @@ class LocationUpdatesBroadcastReceiver : BroadcastReceiver() {
                     locationMap["speed"] = location.speed.toDouble()
                     locationMap["time"] = location.time.toDouble()
                     locationMap["is_mock"] = location.isFromMockProvider
-                    channel!!.invokeMethod("location", locationMap, null)
+
+                    engine = FlutterEngine(context)
+                    FlutterMain.ensureInitializationComplete(context, null)
+
+                    val callbackHandle = context.getSharedPreferences("flutter_workmanager_plugin", Context.MODE_PRIVATE).getLong(CALLBACK_DISPATCHER_HANDLE_KEY, -1L)
+                    val extras = context.getSharedPreferences("flutter_workmanager_plugin", Context.MODE_PRIVATE).getString(CALLBACK_EXTRAS_KEY, "")
+                    locationMap["extras"] = extras!!;
+
+                    val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
+                    val dartBundlePath = FlutterMain.findAppBundlePath()
+
+                    //Backwards compatibility with v1. We register all the user's plugins.
+                    BackgroundLocationHandlerPlugin.pluginRegistryCallback?.registerWith(ShimPluginRegistry(engine))
+                    engine.dartExecutor.executeDartCallback(DartExecutor.DartCallback(context.assets, dartBundlePath, callbackInfo))
+
+                    val backgroundChannel = MethodChannel(engine.dartExecutor, BACKGROUND_CHANNEL_NAME)
+                    backgroundChannel!!.invokeMethod("location", locationMap, null)
                     Log.d(TAG, "Invoked location method on channel: $channel, locationMap $locationMap")
                 }
             }
