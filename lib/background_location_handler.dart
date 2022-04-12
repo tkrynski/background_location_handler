@@ -7,14 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import './location_authorization_status.dart';
 
-/// Function that executes your background work.
-/// You should return whether the task ran successfully or not.
-///
-/// [taskName] Returns the value you provided when registering the task.
-/// iOS will always return [Workmanager.iOSBackgroundTask]
-typedef BackgroundTaskHandler = Future<bool> Function(
-    String taskName, String inputData);
-
+typedef BackgroundTaskHandler = Future<bool> Function(Location location, String inputData);
 
 class BackgroundLocationHandler {
   static const pkg = "com.tkrynski.background_location_handler";
@@ -46,23 +39,31 @@ class BackgroundLocationHandler {
   ///  });
   /// }
   /// ```
-  static const String iOSBackgroundTask = "iOSPerformFetch";
-  static bool _isInDebugMode = false;
-
   MethodChannel _backgroundChannel = const MethodChannel(
       "$pkg/background_channel_work_manager");
   MethodChannel _foregroundChannel = const MethodChannel(
       "$pkg/foreground_channel_work_manager");
 
-  /// A helper function so you only need to implement a [BackgroundTaskHandler]
+  // this is called on Android only
   void executeTask(final BackgroundTaskHandler backgroundTask) {
     WidgetsFlutterBinding.ensureInitialized();
     _backgroundChannel.setMethodCallHandler((call) async {
       if (call.method == 'location') {
         final extras = call.arguments["extras"];
-        final dartTask = call.arguments["$pkg.DART_TASK"];
+
+        // we don't know the location yet -- maybe this will be fixed in a later release
+        var defaultLocation = Location(
+            latitude: 0.0,
+            longitude: 0.0,
+            altitude: 0.0,
+            accuracy: 0.0,
+            bearing: 0.0,
+            speed: 0.0,
+            time: 0.0,
+            isMock: false);
+
         return backgroundTask(
-            dartTask,
+            defaultLocation,
             extras
         );
       }
@@ -70,13 +71,9 @@ class BackgroundLocationHandler {
     // _backgroundChannel.invokeMethod("backgroundChannelInitialized");
   }
 
-  /// This call is required if you wish to use the [BackgroundLocationHandler] plugin.
-  /// [callbackDispatcher] is a top level function which will be invoked by Android
-  /// [isInDebugMode] true will post debug notifications with information about when a task should have run
-  Future<void> initialize(
-      final Function callbackDispatcher,
-      String extras
-      ) async {
+  BackgroundTaskHandler? onLocationUpdate = null;
+
+  Future<void> initialize(callbackDispatcher, String extras) async {
     final callback = PluginUtilities.getCallbackHandle(callbackDispatcher);
     assert(callback != null,
     "The callbackDispatcher needs to be either a static function or a top level function to be accessible as a Flutter entry point.");
@@ -97,41 +94,41 @@ class BackgroundLocationHandler {
     return version;
   }
 
-  static startMonitoring(Function(Location)? locationCallback, Function(Visit)? visitCallback, Function(String)? statusCallback) async {
+  static startMonitoring(BackgroundTaskHandler locationCallback, Function(Visit)? visitCallback, Function(String)? statusCallback, String extraData) async {
     // add a handler on the channel to receive updates from the native classes
     _instance._foregroundChannel.setMethodCallHandler((MethodCall methodCall) async {
       print("MethodCall: ${methodCall.method}");
       if ((methodCall.method == 'location') && (locationCallback != null)) {
         var locationData = Map.from(methodCall.arguments);
         locationCallback(
-          Location(
-              latitude: locationData['latitude'],
-              longitude: locationData['longitude'],
-              altitude: locationData['altitude'],
-              accuracy: locationData['accuracy'],
-              bearing: locationData['bearing'],
-              speed: locationData['speed'],
-              time: locationData['time'],
-              isMock: locationData['is_mock']),
+            Location(
+                latitude: locationData['latitude'],
+                longitude: locationData['longitude'],
+                altitude: locationData['altitude'],
+                accuracy: locationData['accuracy'],
+                bearing: locationData['bearing'],
+                speed: locationData['speed'],
+                time: locationData['time'],
+                isMock: locationData['is_mock']),
+            extraData
         );
       }
       if ((methodCall.method == 'visit') && (visitCallback != null)) {
         var visitData = Map.from(methodCall.arguments);
         visitCallback(
-          Visit(
-              latitude: visitData['latitude'],
-              longitude: visitData['longitude'],
-              accuracy: visitData['accuracy'],
-              arrivalTime: visitData['arrivalTime'],
-              departureTime: visitData['departureTime'],
-              isMock: visitData['is_mock']),
+            Visit(
+                latitude: visitData['latitude'],
+                longitude: visitData['longitude'],
+                accuracy: visitData['accuracy'],
+                arrivalTime: visitData['arrivalTime'],
+                departureTime: visitData['departureTime'],
+                isMock: visitData['is_mock'])
         );
       }
       if ((methodCall.method == 'status') && (statusCallback != null)) {
         statusCallback(methodCall.arguments);
       }
     });
-
 
     // start monitoring
     if (locationCallback != null) {
@@ -142,6 +139,7 @@ class BackgroundLocationHandler {
       await _instance._foregroundChannel.invokeMethod('start_visit_monitoring');
     }
   }
+
   static stopMonitoring() async {
     // don't await
     _instance._foregroundChannel.invokeMethod('stop_visit_monitoring');

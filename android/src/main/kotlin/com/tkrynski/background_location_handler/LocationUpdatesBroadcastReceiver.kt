@@ -88,6 +88,7 @@ class LocationUpdatesBroadcastReceiver : BroadcastReceiver() {
                     locationMap["time"] = location.time.toDouble()
                     locationMap["is_mock"] = location.isFromMockProvider
 
+                    // all this code is just to set up the callback handler
                     engine = FlutterEngine(context)
                     FlutterMain.ensureInitializationComplete(context, null)
 
@@ -100,8 +101,12 @@ class LocationUpdatesBroadcastReceiver : BroadcastReceiver() {
 
                     //Backwards compatibility with v1. We register all the user's plugins.
                     BackgroundLocationHandlerPlugin.pluginRegistryCallback?.registerWith(ShimPluginRegistry(engine))
+
+                    // execute the callback handler.  This sets up the background method channel handler
+                    // so that it can handle the location update to follow
                     engine.dartExecutor.executeDartCallback(DartExecutor.DartCallback(context.assets, dartBundlePath, callbackInfo))
 
+                    // Now, finally invoke the location update in the method channel
                     val backgroundChannel = MethodChannel(engine.dartExecutor, BACKGROUND_CHANNEL_NAME)
                     backgroundChannel!!.invokeMethod("location", locationMap, null)
                     Log.d(TAG, "Invoked location method on channel: $channel, locationMap $locationMap")

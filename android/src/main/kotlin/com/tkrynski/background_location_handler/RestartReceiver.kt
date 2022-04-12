@@ -42,7 +42,6 @@ class RestartReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.i(TAG, "tkrynski onReceive new!")
         try {
             val locationUpdatePendingIntent: PendingIntent by lazy {
                 val intent = Intent(context, LocationUpdatesBroadcastReceiver::class.java)
@@ -50,10 +49,8 @@ class RestartReceiver : BroadcastReceiver() {
                 PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             }
 
-            Log.i(TAG, "tkrynski requesting location updates!")
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
             fusedLocationClient.requestLocationUpdates(locationRequest, locationUpdatePendingIntent)
-            Log.i(TAG, "tkrynski requested location updates!")
         } catch (e: Exception) {
 //            LogUtils.crashlytics(e)
         }

@@ -132,24 +132,3 @@ class BackgroundWorker(private val context: Context,
         // Indicate whether the work finished successfully with the Result
         return resolvableFuture
     }
-//
-//    override fun doWork(): ListenableWorker.Result {
-//
-//        Log.e(TAG, "doWork!")
-//
-//        // set the object variables so that we can be shut down later
-//        if (mFusedLocationClient == null) {
-//            mFusedLocationClient = fusedLocationClient
-//        }
-//        if (mLocationUpdatePendingIntent == null) {
-//            mLocationUpdatePendingIntent = locationUpdatePendingIntent
-//        }
-//
-//        // Check for location
-//        mFusedLocationClient!!.requestLocationUpdates(locationRequest, mLocationUpdatePendingIntent!!)
-//        Log.i(TAG, "requested location updates")
-//
-//        // Indicate whether the work finished successfully with the Result
-//        return ListenableWorker.Result.success()
-//    }
-}
