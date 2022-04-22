@@ -132,3 +132,4 @@ class BackgroundWorker(private val context: Context,
         // Indicate whether the work finished successfully with the Result
         return resolvableFuture
     }
+}
