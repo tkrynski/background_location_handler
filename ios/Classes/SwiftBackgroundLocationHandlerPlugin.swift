@@ -52,38 +52,39 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
     SwiftBackgroundLocationHandlerPlugin.locationManager = locationManager
 
     locationManager.delegate = self
-    locationManager.requestAlwaysAuthorization()
     locationManager.allowsBackgroundLocationUpdates = true
     locationManager.pausesLocationUpdatesAutomatically = false
     locationManager.activityType = CLActivityType.other
     if #available(iOS 11.0, *) {
-        locationManager.showsBackgroundLocationIndicator = true
+      locationManager.showsBackgroundLocationIndicator = true
     }
 
     if (call.method == "start_visit_monitoring") {
-        self.authorize(locationManager)
-        locationManager.startMonitoringVisits()
-        result(true)
+      locationManager.requestAlwaysAuthorization()
+      self.authorize(locationManager)
+      locationManager.startMonitoringVisits()
+      result(true)
     } else if (call.method == "start_location_monitoring") {
-        if (CLLocationManager.significantLocationChangeMonitoringAvailable()) {
-          self.authorize(locationManager)
-          locationManager.startMonitoringSignificantLocationChanges()
-          result(true)
-        } else {
-          result(false)
-        }
+      if (CLLocationManager.significantLocationChangeMonitoringAvailable()) {
+        locationManager.requestAlwaysAuthorization()
+        self.authorize(locationManager)
+        locationManager.startMonitoringSignificantLocationChanges()
+        result(true)
+      } else {
+        result(false)
+      }
     } else if (call.method == "stop_visit_monitoring") {
-        locationManager.stopMonitoringVisits()
-        result(true)
+      locationManager.stopMonitoringVisits()
+      result(true)
     } else if (call.method == "stop_location_monitoring") {
-        locationManager.stopMonitoringSignificantLocationChanges()
-        result(true)
+      locationManager.stopMonitoringSignificantLocationChanges()
+      result(true)
     } else if (call.method == "get_authorization_status") {
-        result(self.getAuthorizationStatus(locationManager))
+      result(self.getAuthorizationStatus(locationManager))
     } else if (call.method == "get_settings_url") {
       result(UIApplication.openSettingsURLString)
     } else {
-        result(true)
+      result(true)
     }
   }
 
