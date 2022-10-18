@@ -63,23 +63,28 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
       locationManager.requestAlwaysAuthorization()
       self.authorize(locationManager)
       locationManager.startMonitoringVisits()
+      print("locationManager.startMonitoringVisits()")
       result(true)
     } else if (call.method == "start_location_monitoring") {
       if (CLLocationManager.significantLocationChangeMonitoringAvailable()) {
         locationManager.requestAlwaysAuthorization()
         self.authorize(locationManager)
+        print("locationManager.startMonitoringSignificantLocationChanges()")
         locationManager.startMonitoringSignificantLocationChanges()
         result(true)
       } else {
         result(false)
       }
     } else if (call.method == "stop_visit_monitoring") {
+      print("locationManager.stopMonitoringVisits()");
       locationManager.stopMonitoringVisits()
       result(true)
     } else if (call.method == "stop_location_monitoring") {
+      print("locationManager.stopMonitoringSignificantLocationChanges()");
       locationManager.stopMonitoringSignificantLocationChanges()
       result(true)
     } else if (call.method == "get_authorization_status") {
+      print("self.getAuthorizationStatus(locationManager");
       result(self.getAuthorizationStatus(locationManager))
     } else if (call.method == "get_settings_url") {
       result(UIApplication.openSettingsURLString)
@@ -91,11 +96,13 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
   // Handle authorizationStatus changes that happen outside of the app
   public func locationManager(_ manager: CLLocationManager,
                        didChangeAuthorization authorizationStatus: CLAuthorizationStatus) {
+      print("locationManager didChangeAuthorization");
       let status = authorizationStatusToString(authorizationStatus)
       SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("status", arguments: status)
   }
 
   public func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
+    print("locationManager didVisit");
     let visit = [
         "latitude": visit.coordinate.latitude,
         "longitude": visit.coordinate.longitude,
@@ -108,6 +115,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
     SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("visit", arguments: visit)
   }
   public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    print("locationManager didUpdateLocations");
     if let lastLocation = locations.last {
       let location = [
           "speed": lastLocation.speed,

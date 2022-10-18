@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Google Inc. All Rights Reserved.
+ * Copyright (C) 2022 Tevye Krynski All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ class LocationUpdatesBroadcastReceiver : BroadcastReceiver() {
                     // Now, finally invoke the location update in the method channel
                     val backgroundChannel = MethodChannel(engine.dartExecutor, BACKGROUND_CHANNEL_NAME)
                     backgroundChannel!!.invokeMethod("location", locationMap, null)
-                    Log.d(TAG, "Invoked location method on channel: $channel, locationMap $locationMap")
+                    Log.d(TAG, "Invoked location method on channel: $BACKGROUND_CHANNEL_NAME, locationMap $locationMap")
                 }
             }
         }

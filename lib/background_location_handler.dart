@@ -136,7 +136,8 @@ class BackgroundLocationHandler {
       print("start_location_monitoring result $result");
     }
     if (visitCallback != null) {
-      await _instance._foregroundChannel.invokeMethod('start_visit_monitoring');
+      final result = await _instance._foregroundChannel.invokeMethod('start_visit_monitoring');
+      print("start_visit_monitoring result $result");
     }
   }
 
