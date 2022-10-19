@@ -24,46 +24,14 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "com.tkrynski.background_location_handler/foreground_channel_work_manager", binaryMessenger: registrar.messenger())
     let instance = SwiftBackgroundLocationHandlerPlugin()
+
+    // tell the channel to call this instance when method calls come from the app
     registrar.addMethodCallDelegate(instance, channel: channel)
     SwiftBackgroundLocationHandlerPlugin.channel = channel
-
-    // not sure if this is needed
-    channel.setMethodCallHandler(instance.handle)
-  }
-
-  private func authorize(_ locationManager: CLLocationManager) {
-    self.locationManager.requestAlwaysAuthorization()
-  }
-
-  private func authorizationStatusToString(_ authorizationStatus: CLAuthorizationStatus) -> String {
-    switch authorizationStatus {
-    case .notDetermined:
-        return "notDetermined"
-    case .authorizedAlways:
-        return "authorizedAlways"
-    case .authorizedWhenInUse:
-        return "authorizedWhenInUse"
-    case .restricted:
-        return "restricted"
-    case .denied:
-        return "denied"
-    @unknown default:
-        return "unknown"
-    }
-  }
-
-  private func getAuthorizationStatus(_ locationManager: CLLocationManager) -> String {
-    let authorizationStatus: CLAuthorizationStatus
-    if #available(iOS 14.0, *) {
-      authorizationStatus = self.locationManager.authorizationStatus
-    } else {
-      authorizationStatus = CLLocationManager.authorizationStatus()
-    }
-    return authorizationStatusToString(authorizationStatus)
   }
 
   /**
-    Handle communication from the app
+    Handle method calls from the app
   */
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     if (call.method == "start_visit_monitoring") {
@@ -93,13 +61,9 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
     }
   }
 
-  // Handle authorizationStatus changes that happen outside of the app
-  public func locationManager(_ manager: CLLocationManager,
-                       didChangeAuthorization authorizationStatus: CLAuthorizationStatus) {
-      let status = authorizationStatusToString(authorizationStatus)
-      SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("status", arguments: status)
-  }
-
+  /**
+  * handle a detected visit
+  */
   public func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
     let visit = [
         "latitude": visit.coordinate.latitude,
@@ -112,6 +76,10 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
 
     SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("visit", arguments: visit)
   }
+
+  /**
+  * Handle a detected location change
+  */
   public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
     if let lastLocation = locations.last {
       let location = [
@@ -126,6 +94,49 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
       ] as [String : Any]
 
       SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("location", arguments: location)
+    }
+  }
+
+  /**
+  * Ask for authorization to track location always (in the background when the app isn't running)
+  */
+  private func authorize(_ locationManager: CLLocationManager) {
+    self.locationManager.requestAlwaysAuthorization()
+  }
+
+  // Handle authorizationStatus changes that happen outside of the app
+  public func locationManager(_ manager: CLLocationManager,
+                       didChangeAuthorization authorizationStatus: CLAuthorizationStatus) {
+      let status = authorizationStatusToString(authorizationStatus)
+      SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("status", arguments: status)
+  }
+
+  // Get the current authorization status
+  private func getAuthorizationStatus(_ locationManager: CLLocationManager) -> String {
+    let authorizationStatus: CLAuthorizationStatus
+    if #available(iOS 14.0, *) {
+      authorizationStatus = self.locationManager.authorizationStatus
+    } else {
+      authorizationStatus = CLLocationManager.authorizationStatus()
+    }
+    return authorizationStatusToString(authorizationStatus)
+  }
+
+  // convert auth status to a string
+  private func authorizationStatusToString(_ authorizationStatus: CLAuthorizationStatus) -> String {
+    switch authorizationStatus {
+    case .notDetermined:
+        return "notDetermined"
+    case .authorizedAlways:
+        return "authorizedAlways"
+    case .authorizedWhenInUse:
+        return "authorizedWhenInUse"
+    case .restricted:
+        return "restricted"
+    case .denied:
+        return "denied"
+    @unknown default:
+        return "unknown"
     }
   }
 }
