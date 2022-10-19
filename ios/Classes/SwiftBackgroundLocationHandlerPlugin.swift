@@ -3,9 +3,24 @@ import UIKit
 import CoreLocation
 
 public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
-  static var locationManager: CLLocationManager?
+  private let locationManager: CLLocationManager
   static var channel: FlutterMethodChannel?
 
+  init(locationManager: CLLocationManager = CLLocationManager()) {
+      self.locationManager = locationManager
+      super.init()
+      self.locationManager.allowsBackgroundLocationUpdates = true
+      self.locationManager.delegate = self
+      self.locationManager.activityType = CLActivityType.other
+      self.locationManager.pausesLocationUpdatesAutomatically = false
+      if #available(iOS 11.0, *) {
+          self.locationManager.showsBackgroundLocationIndicator = true
+      }
+  }
+
+  /**
+    Always called once to register the communication channel
+  */
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "com.tkrynski.background_location_handler/foreground_channel_work_manager", binaryMessenger: registrar.messenger())
     let instance = SwiftBackgroundLocationHandlerPlugin()
@@ -17,7 +32,7 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
   }
 
   private func authorize(_ locationManager: CLLocationManager) {
-    locationManager.requestAlwaysAuthorization()
+    self.locationManager.requestAlwaysAuthorization()
   }
 
   private func authorizationStatusToString(_ authorizationStatus: CLAuthorizationStatus) -> String {
@@ -40,51 +55,36 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
   private func getAuthorizationStatus(_ locationManager: CLLocationManager) -> String {
     let authorizationStatus: CLAuthorizationStatus
     if #available(iOS 14.0, *) {
-      authorizationStatus = locationManager.authorizationStatus
+      authorizationStatus = self.locationManager.authorizationStatus
     } else {
       authorizationStatus = CLLocationManager.authorizationStatus()
     }
     return authorizationStatusToString(authorizationStatus)
   }
 
+  /**
+    Handle communication from the app
+  */
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    let locationManager = CLLocationManager()
-    SwiftBackgroundLocationHandlerPlugin.locationManager = locationManager
-
-    locationManager.delegate = self
-    locationManager.allowsBackgroundLocationUpdates = true
-    locationManager.pausesLocationUpdatesAutomatically = false
-    locationManager.activityType = CLActivityType.other
-    if #available(iOS 11.0, *) {
-      locationManager.showsBackgroundLocationIndicator = true
-    }
-
     if (call.method == "start_visit_monitoring") {
-      locationManager.requestAlwaysAuthorization()
       self.authorize(locationManager)
-      locationManager.startMonitoringVisits()
-      print("locationManager.startMonitoringVisits()")
+      self.locationManager.startMonitoringVisits()
       result(true)
     } else if (call.method == "start_location_monitoring") {
       if (CLLocationManager.significantLocationChangeMonitoringAvailable()) {
-        locationManager.requestAlwaysAuthorization()
         self.authorize(locationManager)
-        print("locationManager.startMonitoringSignificantLocationChanges()")
-        locationManager.startMonitoringSignificantLocationChanges()
+        self.locationManager.startMonitoringSignificantLocationChanges()
         result(true)
       } else {
         result(false)
       }
     } else if (call.method == "stop_visit_monitoring") {
-      print("locationManager.stopMonitoringVisits()");
-      locationManager.stopMonitoringVisits()
+      self.locationManager.stopMonitoringVisits()
       result(true)
     } else if (call.method == "stop_location_monitoring") {
-      print("locationManager.stopMonitoringSignificantLocationChanges()");
-      locationManager.stopMonitoringSignificantLocationChanges()
+      self.locationManager.stopMonitoringSignificantLocationChanges()
       result(true)
     } else if (call.method == "get_authorization_status") {
-      print("self.getAuthorizationStatus(locationManager");
       result(self.getAuthorizationStatus(locationManager))
     } else if (call.method == "get_settings_url") {
       result(UIApplication.openSettingsURLString)
@@ -96,13 +96,11 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
   // Handle authorizationStatus changes that happen outside of the app
   public func locationManager(_ manager: CLLocationManager,
                        didChangeAuthorization authorizationStatus: CLAuthorizationStatus) {
-      print("locationManager didChangeAuthorization");
       let status = authorizationStatusToString(authorizationStatus)
       SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("status", arguments: status)
   }
 
   public func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
-    print("locationManager didVisit");
     let visit = [
         "latitude": visit.coordinate.latitude,
         "longitude": visit.coordinate.longitude,
@@ -115,7 +113,6 @@ public class SwiftBackgroundLocationHandlerPlugin: NSObject, FlutterPlugin, CLLo
     SwiftBackgroundLocationHandlerPlugin.channel?.invokeMethod("visit", arguments: visit)
   }
   public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-    print("locationManager didUpdateLocations");
     if let lastLocation = locations.last {
       let location = [
           "speed": lastLocation.speed,
