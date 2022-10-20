@@ -51,15 +51,14 @@ class BackgroundLocationHandler {
       if (call.method == 'location') {
         final extras = call.arguments["extras"];
 
-        // we don't know the location yet -- maybe this will be fixed in a later release
         var defaultLocation = Location(
-            latitude: 0.0,
-            longitude: 0.0,
-            altitude: 0.0,
-            accuracy: 0.0,
-            bearing: 0.0,
-            speed: 0.0,
-            time: 0.0,
+            latitude: call.arguments["latitude"],
+            longitude: call.arguments["longitude"],
+            altitude: call.arguments["altitude"],
+            accuracy: call.arguments["accuracy"],
+            bearing: call.arguments["bearing"],
+            speed: call.arguments["speed"],
+            time: call.arguments["time"],
             isMock: false);
 
         return backgroundTask(
